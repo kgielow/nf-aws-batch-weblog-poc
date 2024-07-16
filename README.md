@@ -60,6 +60,64 @@ Create a job queue as follows:
     2. MISCONFIGURATION:JOB_RESOURCE_REQUIREMENT 600s
     3. CAPACITY:INSUFFICIENT_INSTANCE_CAPACITY 600s
 
+#### IAM Roles
+Create an ECS task execution role named `ecsTaskExecutionRole` (if it doesn't already exist after configuring Batch).  Attach the following AWS managed policies to the role:
+* AmazonEC2ContainerServiceRole
+* AmazonECSTaskExecutionRolePolicy
+
+Edit the trust policy on the Trust relationship tab as follows:
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+```
+
+Create an ECS task role named `ecsTaskRole` (if it doesn't already exist after configuring Batch).
+
+Create a customer inline policy as follows and attach it to the role.  Under Resource, supply the correct ARNs to your S3 bucket and top-level folder used as the Nextflow work directory:
+```
+{
+    "Statement": [
+        {
+            "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Effect": "Allow",
+            "Resource": "arn:aws:s3:::nextflow-fargate-work"
+        },
+        {
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject"
+            ],
+            "Effect": "Allow",
+            "Resource": "arn:aws:s3:::nextflow-fargate-work/*"
+        }
+    ],
+    "Version": "2012-10-17"
+}
+```
+
+#### Ubuntu/WSL
+Install the following OS packages (pre-requisites for Nextflow CLI, etc.):
+
+```bash
+sudo apt update
+sudo apt upgrade -y
+sudo apt install python3 default-jre -y
+```
+
 ### Nextflow CLI
 You'll need to install the Nextflow CLI (and its prerequisites) on the machine that will kick off the Nextflow workflow.
 
@@ -79,10 +137,22 @@ To run the Nextflow workflow against AWS resources (Batch, S3), you'll need to m
 > NOTE: In a real-world application, AWS credentials for an IAM user would NOT be supplied via the config file.  Instead an IAM role would be used with the appropriate attached policies by an AWS ECS task.
 
 ## Run
-Execute the `main.sh` shell script from the project root.  
+First, execute the `echo.py` Python script from the project root to start a local server to receive/log POST requests coming from the nf-weblog plugin:
+```bash
+chmod +x echo.py
+./echo.py
+```
+
+Next, execute the `main.sh` shell script from the project root to run the Nextflow workflow:
+```bash
+chmod +x main.sh
+./main.sh
+```
 
 Logs should be written to `./logs`.  
 
 Results should be written to `./results`.  
 
 All working files used by Nextflow during the workflow execution will be in the S3 bucket at the path specified in the config.
+
+You should see POST requests made on your local server with JSON payloads, representing the Nextflow workflow events (status changes).

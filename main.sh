@@ -5,4 +5,4 @@
 set -e
 set -u
 
-NXF_LOG_FILE="./logs/.nextflow.log" nextflow -C ./nextflow.config run -bucket-dir s3://nextflow-fargate-work/work -r v2.3 -resume https://github.com/nextflow-io/rnaseq-nf
+NXF_LOG_FILE="./logs/.nextflow.log" nextflow -C ./nextflow.config run -bucket-dir s3://nextflow-fargate-work/work -r v2.3 https://github.com/nextflow-io/rnaseq-nf
